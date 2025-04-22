@@ -18,7 +18,7 @@ export default function Home() {
   // 保存数据到数据库
   const saveToDatabase = async (data: string) => {
     try {
-      const response = await fetch("http://localhost:3001/api/save", {
+      const response = await fetch("/api/database", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -36,7 +36,7 @@ export default function Home() {
   // 获取所有数据
   const fetchResults = async () => {
     try {
-      const response = await fetch("http://localhost:3001/api/results");
+      const response = await fetch("/api/database");
       const data = await response.json();
       console.log(data);
       setDatabaseResults(data); // 更新数据库结果到状态
@@ -48,7 +48,7 @@ export default function Home() {
   // 删除单条数据
   const deleteResult = async (id: number) => {
     try {
-      const response = await fetch(`http://localhost:3001/api/results/${id}`, {
+      const response = await fetch(`/api/database?id=${id}`, {
         method: "DELETE",
       });
       const result = await response.json();
@@ -115,6 +115,7 @@ export default function Home() {
                         ...projectInputs[project],
                         count: e.target.value ? Number(e.target.value) : "",
                       },
+                      
                     })
                   }
                 />
