@@ -1,7 +1,7 @@
-const express = require("express");
-const { Pool } = require("pg");
-const bodyParser = require("body-parser");
-const cors = require("cors");
+import express from "express";
+import { Pool } from "pg";
+import bodyParser from "body-parser";
+import cors from "cors";
 
 const app = express();
 const port = 3001;
@@ -34,7 +34,7 @@ app.post("/api/save", async (req, res) => {
 });
 
 // 获取所有数据
-app.get("/api/results", async (req, res) => {
+app.get("/api/results", async (_, res) => {
   try {
     const result = await pool.query("SELECT * FROM results ORDER BY id ASC");
     res.status(200).json(result.rows);
