@@ -4,31 +4,22 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
 export const saveData = async (data: string): Promise<DatabaseResult> => {
   try {
-    const newData = {
-      data: data,
-      createdAt: new Date().toLocaleString()
-    };
-
-    const response = await fetch(`${API_BASE_URL}/api/save`, {
+    const response = await fetch(`${API_BASE_URL}/api/database`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify(newData),
+      body: JSON.stringify({ 
+        data,
+        createdAt: new Date().toLocaleString()
+      }),
     });
 
     if (!response.ok) {
       throw new Error('保存失败');
     }
 
-    const result = await response.json();
-    console.log('API 返回结果:', result);
-
-    return {
-      id: result.id,
-      data: data, // 使用原始数据
-      createdAt: result.createdAt || newData.createdAt
-    };
+    return response.json();
   } catch (error) {
     console.error('保存数据时出错:', error);
     throw error;
@@ -36,7 +27,7 @@ export const saveData = async (data: string): Promise<DatabaseResult> => {
 };
 
 export const fetchData = async (): Promise<DatabaseResult[]> => {
-  const response = await fetch(`${API_BASE_URL}/api/results`);
+  const response = await fetch(`${API_BASE_URL}/api/database`);
   if (!response.ok) {
     throw new Error('获取数据失败');
   }
@@ -44,17 +35,10 @@ export const fetchData = async (): Promise<DatabaseResult[]> => {
 };
 
 export const deleteData = async (id: number): Promise<void> => {
-  try {
-    const response = await fetch(`${API_BASE_URL}/api/results/${id}`, {
-      method: "DELETE",
-    });
-    
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({ error: '删除失败' }));
-      throw new Error(errorData.error || '删除失败');
-    }
-  } catch (error) {
-    console.error('删除数据时出错:', error);
-    throw error;
+  const response = await fetch(`${API_BASE_URL}/api/database?id=${id}`, {
+    method: "DELETE",
+  });
+  if (!response.ok) {
+    throw new Error('删除失败');
   }
 };
