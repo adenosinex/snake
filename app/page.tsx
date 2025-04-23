@@ -24,6 +24,10 @@ export default function Home() {
 
   // 保存数据到数据库
   const saveToDatabase = async (data: string) => {
+    // 前台立即更新
+    const tempId = Date.now(); // 临时 ID，用于前端展示
+    setDatabaseResults((prev) => [...prev, { id: tempId, data }]);
+
     try {
       const response = await fetch(`${API_BASE_URL}/api/save`, {
         method: "POST",
@@ -34,9 +38,17 @@ export default function Home() {
       });
       const result = await response.json();
       console.log(result.message);
-      fetchResults(); // 保存后重新加载数据
+
+      // 替换临时 ID 为实际数据库返回的 ID
+      setDatabaseResults((prev) =>
+        prev.map((item) =>
+          item.id === tempId ? { id: result.id, data: item.data } : item
+        )
+      );
     } catch (err) {
       console.error("保存数据时出错:", err);
+      // 如果保存失败，移除临时数据
+      setDatabaseResults((prev) => prev.filter((item) => item.id !== tempId));
     }
   };
 
@@ -54,15 +66,19 @@ export default function Home() {
 
   // 删除单条数据
   const deleteResult = async (id: number) => {
+    // 前台立即更新
+    setDatabaseResults((prev) => prev.filter((item) => item.id !== id));
+
     try {
       const response = await fetch(`${API_BASE_URL}/api/results/${id}`, {
         method: "DELETE",
       });
       const result = await response.json();
       console.log(result.message);
-      fetchResults(); // 删除后重新加载数据
     } catch (err) {
       console.error("删除数据时出错:", err);
+      // 如果删除失败，重新添加数据
+      fetchResults(); // 或者手动恢复数据
     }
   };
 
@@ -201,25 +217,46 @@ export default function Home() {
           </ul>
         </div>
         <div className="w-full">
-          <h2 className="text-lg font-semibold">数据库中的数据:</h2>
-          <ul className="list-disc pl-5">
-            {databaseResults.map((item) => (
-              <li key={item.id} className="flex justify-between items-center text-sm">
-                <span
-                  className="cursor-pointer text-blue-500 hover:underline"
-                  onClick={() => handleCopy(item.data)}
-                >
-                  {item.data}（点击复制）
-                </span>
+          <h2 className="text-lg font-semibold mb-4">数据库中的数据:</h2>
+          <div className="space-y-3">
+            {databaseResults.map((item, index) => (
+              <div
+                key={`${item.id}-${index}`}
+                className="bg-white rounded-lg shadow p-4 flex justify-between items-center hover:shadow-md transition-shadow"
+              >
+                <div className="flex-1 mr-4">
+                  <span
+                    className="cursor-pointer text-gray-700 hover:text-blue-600 transition-colors"
+                    onClick={() => handleCopy(item.data)}
+                  >
+                    {item.data}
+                    <span className="text-sm text-gray-500 ml-2">（点击复制）</span>
+                  </span>
+                </div>
                 <button
-                  className="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600 text-sm"
+                  className="px-3 py-1.5 bg-red-50 text-red-600 rounded-md hover:bg-red-100 
+                     transition-colors duration-200 flex items-center space-x-1 text-sm"
                   onClick={() => deleteResult(item.id)}
                 >
-                  删除
+                  <svg 
+                    xmlns="http://www.w3.org/2000/svg" 
+                    className="h-4 w-4" 
+                    fill="none" 
+                    viewBox="0 0 24 24" 
+                    stroke="currentColor"
+                  >
+                    <path 
+                      strokeLinecap="round" 
+                      strokeLinejoin="round" 
+                      strokeWidth={2} 
+                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" 
+                    />
+                  </svg>
+                  <span>删除</span>
                 </button>
-              </li>
+              </div>
             ))}
-          </ul>
+          </div>
         </div>
       </main>
     </div>
