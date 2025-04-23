@@ -13,7 +13,7 @@ const defaultProjects = process.env.NEXT_PUBLIC_PROJECTS
 type DatabaseResult = {
   id: number;
   data: string;
-  created_at: string;
+  createdAt: string; // 改用驼峰命名
 };
 
 export default function Home() {
@@ -32,14 +32,15 @@ export default function Home() {
 
   // 保存数据到数据库
   const saveToDatabase = async (data: string) => {
-    const now = new Date().toLocaleString('zh-CN');
+    const now = new Date().toISOString(); // 使用 ISO 格式的时间字符串
     const tempId = Date.now();
+
     // 前台立即更新
     setDatabaseResults((prev) => [{ 
       id: tempId, 
       data,
-      created_at: now
-    },...prev, ]);
+      createdAt: now
+    }, ...prev]);
 
     try {
       const response = await fetch(`${API_BASE_URL}/api/save`, {
@@ -49,9 +50,14 @@ export default function Home() {
         },
         body: JSON.stringify({ 
           data,
-          created_at: now 
+          createdAt: now 
         }),
       });
+      
+      if (!response.ok) {
+        throw new Error('保存失败');
+      }
+      
       const result = await response.json();
       console.log(result.message);
 
@@ -61,7 +67,7 @@ export default function Home() {
           item.id === tempId ? { 
             id: result.id, 
             data: item.data,
-            created_at: item.created_at 
+            createdAt: item.createdAt
           } : item
         )
       );
@@ -78,7 +84,7 @@ export default function Home() {
       const response = await fetch(`${API_BASE_URL}/api/results`);
       let  data = await response.json();
       //  data = data.sort((a: DatabaseResult, b: DatabaseResult) => {
-      //   return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      //   return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
       // });
       console.log("数据库中的数据:", data);
       setDatabaseResults(data); // 更新数据库结果到状态
@@ -257,7 +263,7 @@ export default function Home() {
                       <span className="text-sm text-gray-500 ml-2">（点击复制）</span>
                     </span>
                     <span className="text-xs text-gray-400 mt-1">
-                      创建时间：{item.created_at}
+                      创建时间：{new Date(item.createdAt).toLocaleString('zh-CN')}
                     </span>
                   </div>
                 </div>

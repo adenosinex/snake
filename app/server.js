@@ -22,7 +22,6 @@ app.use(bodyParser.json());
 app.post("/api/save", async (req, res) => {
   const { data, createdAt } = req.body;
   try {
-    // 如果表不存在，则创建表（添加 createdAt 字段）
     await pool.query(`
       CREATE TABLE IF NOT EXISTS results (
         id SERIAL PRIMARY KEY, 
@@ -30,14 +29,17 @@ app.post("/api/save", async (req, res) => {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )`
     );
-    // 插入数据，包含 createdAt
+    
     const result = await pool.query(
-      "INSERT INTO results (data, created_at) VALUES ($1, $2) RETURNING *",
+      "INSERT INTO results (data, created_at) VALUES ($1, $2) RETURNING id, data, created_at as \"createdAt\"",
       [data, createdAt]
     );
+    
     res.status(200).json({ 
       message: "数据已保存",
-      id: result.rows[0].id
+      id: result.rows[0].id,
+      data: result.rows[0].data,
+      createdAt: result.rows[0].createdAt
     });
   } catch (err) {
     console.error("保存数据时出错:", err);
