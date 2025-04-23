@@ -1,4 +1,4 @@
-import { ProjectInput, ProjectInputs } from '../types';
+import type{ ProjectInput, ProjectInputs } from '../types';
 
 interface ProjectInputProps {
   project: string;
