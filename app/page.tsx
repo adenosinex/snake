@@ -93,13 +93,20 @@ export default function Home() {
     day: "2-digit",
   });
 
+  // 点击复制功能
+  const handleCopy = (text: string) => {
+    navigator.clipboard.writeText(text).then(() => {
+      alert("已复制到剪贴板");
+    });
+  };
+
   return (
-    <div className="min-h-screen p-8 pb-20">
-      <main className="flex flex-col items-center gap-8">
-        <h1 className="text-2xl font-bold">运动记录</h1>
-        <div className="flex flex-wrap gap-8 items-start">
+    <div className="min-h-screen p-4 pb-20 bg-gray-100">
+      <main className="flex flex-col items-center gap-4">
+        <h1 className="text-xl font-bold">运动记录</h1>
+        <div className="flex flex-wrap gap-4 items-start w-full">
           {projects.map((project) => (
-            <div key={project} className="flex flex-col gap-2 border p-4 rounded shadow-md">
+            <div key={project} className="flex flex-col gap-2 border p-4 rounded shadow-md bg-white w-full">
               <h3 className="font-semibold text-center">{project}</h3>
               <div className="flex items-center gap-2">
                 <label className="w-24 text-right">次数:</label>
@@ -115,7 +122,6 @@ export default function Home() {
                         ...projectInputs[project],
                         count: e.target.value ? Number(e.target.value) : "",
                       },
-                      
                     })
                   }
                 />
@@ -160,23 +166,35 @@ export default function Home() {
           ))}
         </div>
         <button
-          className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+          className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 w-full"
           onClick={handleAddEntry}
         >
           添加
         </button>
-        <div className="w-full max-w-md">
+        <div className="w-full">
           <h2 className="text-lg font-semibold">生成结果:</h2>
           <ul className="list-disc pl-5">
-            {currentOutput && <li>{today} {currentOutput}</li>}
+            {currentOutput && (
+              <li
+                className="cursor-pointer text-blue-500 hover:underline"
+                onClick={() => handleCopy(`${today} ${currentOutput}`)}
+              >
+                {today} {currentOutput}（点击复制）
+              </li>
+            )}
           </ul>
         </div>
-        <div className="w-full max-w-md">
+        <div className="w-full">
           <h2 className="text-lg font-semibold">数据库中的数据:</h2>
           <ul className="list-disc pl-5">
             {databaseResults.map((item) => (
               <li key={item.id} className="flex justify-between items-center">
-                <span>{item.data}</span>
+                <span
+                  className="cursor-pointer text-blue-500 hover:underline"
+                  onClick={() => handleCopy(item.data)}
+                >
+                  {item.data}（点击复制）
+                </span>
                 <button
                   className="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600"
                   onClick={() => deleteResult(item.id)}
