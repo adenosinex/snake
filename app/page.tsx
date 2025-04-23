@@ -9,6 +9,13 @@ const defaultProjects = process.env.NEXT_PUBLIC_PROJECTS
   ? process.env.NEXT_PUBLIC_PROJECTS.split(",")
   : ["a", "b"]; // 如果环境变量未设置，使用默认值
 
+// 修改类型定义
+type DatabaseResult = {
+  id: number;
+  data: string;
+  created_at: string;
+};
+
 export default function Home() {
   const [projects, setProjects] = useState<string[]>(defaultProjects);
   const [projectInputs, setProjectInputs] = useState<{
@@ -20,13 +27,19 @@ export default function Home() {
     }, {} as { [key: string]: { count: number | ""; description1: string; description2: string } })
   );
   const [currentOutput, setCurrentOutput] = useState<string>("");
-  const [databaseResults, setDatabaseResults] = useState<{ id: number; data: string }[]>([]);
+  // 修改 useState 定义
+  const [databaseResults, setDatabaseResults] = useState<DatabaseResult[]>([]);
 
   // 保存数据到数据库
   const saveToDatabase = async (data: string) => {
+    const now = new Date().toLocaleString('zh-CN');
+    const tempId = Date.now();
     // 前台立即更新
-    const tempId = Date.now(); // 临时 ID，用于前端展示
-    setDatabaseResults((prev) => [...prev, { id: tempId, data }]);
+    setDatabaseResults((prev) => [{ 
+      id: tempId, 
+      data,
+      created_at: now
+    },...prev, ]);
 
     try {
       const response = await fetch(`${API_BASE_URL}/api/save`, {
@@ -34,7 +47,10 @@ export default function Home() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ data }),
+        body: JSON.stringify({ 
+          data,
+          created_at: now 
+        }),
       });
       const result = await response.json();
       console.log(result.message);
@@ -42,7 +58,11 @@ export default function Home() {
       // 替换临时 ID 为实际数据库返回的 ID
       setDatabaseResults((prev) =>
         prev.map((item) =>
-          item.id === tempId ? { id: result.id, data: item.data } : item
+          item.id === tempId ? { 
+            id: result.id, 
+            data: item.data,
+            created_at: item.created_at 
+          } : item
         )
       );
     } catch (err) {
@@ -56,7 +76,10 @@ export default function Home() {
   const fetchResults = async () => {
     try {
       const response = await fetch(`${API_BASE_URL}/api/results`);
-      const data = await response.json();
+      let  data = await response.json();
+      //  data = data.sort((a: DatabaseResult, b: DatabaseResult) => {
+      //   return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      // });
       console.log("数据库中的数据:", data);
       setDatabaseResults(data); // 更新数据库结果到状态
     } catch (err) {
@@ -225,13 +248,18 @@ export default function Home() {
                 className="bg-white rounded-lg shadow p-4 flex justify-between items-center hover:shadow-md transition-shadow"
               >
                 <div className="flex-1 mr-4">
-                  <span
-                    className="cursor-pointer text-gray-700 hover:text-blue-600 transition-colors"
-                    onClick={() => handleCopy(item.data)}
-                  >
-                    {item.data}
-                    <span className="text-sm text-gray-500 ml-2">（点击复制）</span>
-                  </span>
+                  <div className="flex flex-col">
+                    <span
+                      className="cursor-pointer text-gray-700 hover:text-blue-600 transition-colors"
+                      onClick={() => handleCopy(item.data)}
+                    >
+                      {item.data}
+                      <span className="text-sm text-gray-500 ml-2">（点击复制）</span>
+                    </span>
+                    <span className="text-xs text-gray-400 mt-1">
+                      创建时间：{item.created_at}
+                    </span>
+                  </div>
                 </div>
                 <button
                   className="px-3 py-1.5 bg-red-50 text-red-600 rounded-md hover:bg-red-100 

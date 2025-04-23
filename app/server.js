@@ -20,13 +20,25 @@ app.use(bodyParser.json());
 
 // 保存数据到数据库
 app.post("/api/save", async (req, res) => {
-  const { data } = req.body;
+  const { data, createdAt } = req.body;
   try {
-    // 如果表不存在，则创建表
-    await pool.query("CREATE TABLE IF NOT EXISTS results (id SERIAL PRIMARY KEY, data TEXT)");
-    // 插入数据
-    await pool.query("INSERT INTO results (data) VALUES ($1)", [data]);
-    res.status(200).json({ message: "数据已保存" });
+    // 如果表不存在，则创建表（添加 createdAt 字段）
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS results (
+        id SERIAL PRIMARY KEY, 
+        data TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )`
+    );
+    // 插入数据，包含 createdAt
+    const result = await pool.query(
+      "INSERT INTO results (data, created_at) VALUES ($1, $2) RETURNING *",
+      [data, createdAt]
+    );
+    res.status(200).json({ 
+      message: "数据已保存",
+      id: result.rows[0].id
+    });
   } catch (err) {
     console.error("保存数据时出错:", err);
     res.status(500).json({ error: "保存数据时出错" });
@@ -36,7 +48,9 @@ app.post("/api/save", async (req, res) => {
 // 获取所有数据
 app.get("/api/results", async (_, res) => {
   try {
-    const result = await pool.query("SELECT * FROM results ORDER BY id ASC");
+    const result = await pool.query(
+      "SELECT id, data, created_at as \"createdAt\" FROM results ORDER BY created_at DESC"
+    );
     res.status(200).json(result.rows);
   } catch (err) {
     console.error("获取数据时出错:", err);
