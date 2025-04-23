@@ -1,117 +1,80 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { DatabaseResult, ProjectInputs } from './types';
+import { saveData, fetchData, deleteData } from './services/api';
+import ProjectInput from './components/ProjectInput';
+import DataDisplay from './components/DataDisplay';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
-
-// 从环境变量中获取项目列表
 const defaultProjects = process.env.NEXT_PUBLIC_PROJECTS
   ? process.env.NEXT_PUBLIC_PROJECTS.split(",")
-  : ["a", "b"]; // 如果环境变量未设置，使用默认值
-
-// 修改类型定义
-type DatabaseResult = {
-  id: number;
-  data: string;
-  createdAt: string; // 改用驼峰命名
-};
+  : ["a", "b"];
 
 export default function Home() {
   const [projects, setProjects] = useState<string[]>(defaultProjects);
-  const [projectInputs, setProjectInputs] = useState<{
-    [key: string]: { count: number | ""; description1: string; description2: string };
-  }>(
+  const [projectInputs, setProjectInputs] = useState<ProjectInputs>(
     projects.reduce((acc, project) => {
       acc[project] = { count: "", description1: "", description2: "" };
       return acc;
-    }, {} as { [key: string]: { count: number | ""; description1: string; description2: string } })
+    }, {} as ProjectInputs)
   );
   const [currentOutput, setCurrentOutput] = useState<string>("");
-  // 修改 useState 定义
   const [databaseResults, setDatabaseResults] = useState<DatabaseResult[]>([]);
 
-  // 保存数据到数据库
-  const saveToDatabase = async (data: string) => {
-    const now = new Date().toISOString(); // 使用 ISO 格式的时间字符串
-    const tempId = Date.now();
+  const handleInputChange = (project: string, updates: Partial<ProjectInputs[string]>) => {
+    setProjectInputs(prev => ({
+      ...prev,
+      [project]: { ...prev[project], ...updates }
+    }));
+  };
 
-    // 前台立即更新
-    setDatabaseResults((prev) => [{ 
-      id: tempId, 
-      data,
-      createdAt: now
-    }, ...prev]);
+  const saveToDatabase = async (data: string) => {
+    const tempId = Date.now();
+    const now = new Date().toISOString();
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/save`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ 
-          data,
-          createdAt: now 
-        }),
-      });
-      
-      if (!response.ok) {
-        throw new Error('保存失败');
-      }
-      
-      const result = await response.json();
-      console.log(result.message);
+      // 先保存到数据库
+      const result = await saveData(data);
+      console.log('保存结果:', result);
 
-      // 替换临时 ID 为实际数据库返回的 ID
-      setDatabaseResults((prev) =>
-        prev.map((item) =>
-          item.id === tempId ? { 
-            id: result.id, 
-            data: item.data,
-            createdAt: item.createdAt
-          } : item
-        )
-      );
+      // 更新前端数据
+      setDatabaseResults(prev => [
+        {
+          id: result.id,
+          data: data,
+          createdAt: result.createdAt || now
+        },
+        ...prev
+      ]);
+
     } catch (err) {
       console.error("保存数据时出错:", err);
-      // 如果保存失败，移除临时数据
-      setDatabaseResults((prev) => prev.filter((item) => item.id !== tempId));
     }
   };
 
-  // 获取所有数据
   const fetchResults = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/results`);
-      let  data = await response.json();
-      //  data = data.sort((a: DatabaseResult, b: DatabaseResult) => {
-      //   return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-      // });
+      const data = await fetchData();
       console.log("数据库中的数据:", data);
-      setDatabaseResults(data); // 更新数据库结果到状态
+      setDatabaseResults(data);
     } catch (err) {
       console.error("获取数据时出错:", err);
     }
   };
 
-  // 删除单条数据
   const deleteResult = async (id: number) => {
-    // 前台立即更新
     setDatabaseResults((prev) => prev.filter((item) => item.id !== id));
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/results/${id}`, {
-        method: "DELETE",
-      });
-      const result = await response.json();
-      console.log(result.message);
+      const response = await deleteData(id);
+      // const result = await response.json();
+      // console.log(result.message);
     } catch (err) {
       console.error("删除数据时出错:", err);
-      // 如果删除失败，重新添加数据
-      fetchResults(); // 或者手动恢复数据
+      fetchResults();
     }
   };
 
-  // 添加新条目
   const handleAddEntry = async () => {
     const newEntries = Object.entries(projectInputs)
       .filter(([_, inputs]) => inputs.count !== "" || inputs.description1 || inputs.description2)
@@ -126,21 +89,30 @@ export default function Home() {
       });
 
     if (newEntries.length > 0) {
-      const output = today + newEntries.join(" ");
+      const output = today +" "+ newEntries.join(" ");
       console.log("生成的结果:", output);
-      // 更新当前输出
       setCurrentOutput(output);
-
-      // 保存到数据库
       await saveToDatabase(output);
-
-    
     }
   };
 
-  // 页面加载时自动获取数据
   useEffect(() => {
-    fetchResults();
+    const fetchAndUpdateResults = async () => {
+      try {
+        const data = await fetchData();
+        setDatabaseResults(data);
+      } catch (err) {
+        console.error("获取数据时出错:", err);
+      }
+    };
+
+    // 初始加载
+    fetchAndUpdateResults();
+
+    // 设置定期刷新（可选）
+    const intervalId = setInterval(fetchAndUpdateResults, 5000);
+
+    return () => clearInterval(intervalId);
   }, []);
 
   const today = new Date().toLocaleDateString("zh-CN", {
@@ -149,7 +121,6 @@ export default function Home() {
     day: "2-digit",
   });
 
-  // 点击复制功能
   const handleCopy = (text: string) => {
     navigator.clipboard.writeText(text).then(() => {
       console.log("已复制到剪贴板");
@@ -162,68 +133,12 @@ export default function Home() {
         <h1 className="text-2xl font-bold text-center">运动记录</h1>
         <div className="flex flex-col gap-4 w-full">
           {projects.map((project) => (
-            <div
+            <ProjectInput
               key={project}
-              className="flex flex-col gap-2 border p-4 rounded shadow-md bg-white w-full"
-            >
-              <h3 className="font-semibold text-center text-lg">{project}</h3>
-              <div className="flex flex-col gap-2">
-                <div className="flex items-center gap-2">
-                  <label className="w-24 text-right text-sm">次数:</label>
-                  <input
-                    type="number"
-                    className="border p-2 rounded flex-1 text-sm"
-                    placeholder={`输入${project}次数`}
-                    value={projectInputs[project].count}
-                    onChange={(e) =>
-                      setProjectInputs({
-                        ...projectInputs,
-                        [project]: {
-                          ...projectInputs[project],
-                          count: e.target.value ? Number(e.target.value) : "",
-                        },
-                      })
-                    }
-                  />
-                </div>
-                <div className="flex items-center gap-2">
-                  <label className="w-24 text-right text-sm">描述1:</label>
-                  <input
-                    type="text"
-                    className="border p-2 rounded flex-1 text-sm"
-                    placeholder={`输入${project}描述1`}
-                    value={projectInputs[project].description1}
-                    onChange={(e) =>
-                      setProjectInputs({
-                        ...projectInputs,
-                        [project]: {
-                          ...projectInputs[project],
-                          description1: e.target.value,
-                        },
-                      })
-                    }
-                  />
-                </div>
-                <div className="flex items-center gap-2">
-                  <label className="w-24 text-right text-sm">描述2:</label>
-                  <input
-                    type="text"
-                    className="border p-2 rounded flex-1 text-sm"
-                    placeholder={`输入${project}描述2`}
-                    value={projectInputs[project].description2}
-                    onChange={(e) =>
-                      setProjectInputs({
-                        ...projectInputs,
-                        [project]: {
-                          ...projectInputs[project],
-                          description2: e.target.value,
-                        },
-                      })
-                    }
-                  />
-                </div>
-              </div>
-            </div>
+              project={project}
+              input={projectInputs[project]}
+              onChange={handleInputChange}
+            />
           ))}
         </div>
         <button
@@ -238,9 +153,9 @@ export default function Home() {
             {currentOutput && (
               <li
                 className="cursor-pointer text-blue-500 hover:underline text-sm"
-                onClick={() => handleCopy(   currentOutput  )}
+                onClick={() => handleCopy(currentOutput)}
               >
-                {currentOutput }（点击复制）
+                {currentOutput}（点击复制）
               </li>
             )}
           </ul>
@@ -249,46 +164,12 @@ export default function Home() {
           <h2 className="text-lg font-semibold mb-4">数据库中的数据:</h2>
           <div className="space-y-3">
             {databaseResults.map((item, index) => (
-              <div
+              <DataDisplay
                 key={`${item.id}-${index}`}
-                className="bg-white rounded-lg shadow p-4 flex justify-between items-center hover:shadow-md transition-shadow"
-              >
-                <div className="flex-1 mr-4">
-                  <div className="flex flex-col">
-                    <span
-                      className="cursor-pointer text-gray-700 hover:text-blue-600 transition-colors"
-                      onClick={() => handleCopy(item.data)}
-                    >
-                      {item.data}
-                      <span className="text-sm text-gray-500 ml-2">（点击复制）</span>
-                    </span>
-                    <span className="text-xs text-gray-400 mt-1">
-                      创建时间：{new Date(item.createdAt).toLocaleString('zh-CN')}
-                    </span>
-                  </div>
-                </div>
-                <button
-                  className="px-3 py-1.5 bg-red-50 text-red-600 rounded-md hover:bg-red-100 
-                     transition-colors duration-200 flex items-center space-x-1 text-sm"
-                  onClick={() => deleteResult(item.id)}
-                >
-                  <svg 
-                    xmlns="http://www.w3.org/2000/svg" 
-                    className="h-4 w-4" 
-                    fill="none" 
-                    viewBox="0 0 24 24" 
-                    stroke="currentColor"
-                  >
-                    <path 
-                      strokeLinecap="round" 
-                      strokeLinejoin="round" 
-                      strokeWidth={2} 
-                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" 
-                    />
-                  </svg>
-                  <span>删除</span>
-                </button>
-              </div>
+                item={item}
+                onCopy={handleCopy}
+                onDelete={deleteResult}
+              />
             ))}
           </div>
         </div>
