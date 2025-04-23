@@ -110,9 +110,9 @@ export default function Home() {
     fetchAndUpdateResults();
 
     // 设置定期刷新（可选）
-    const intervalId = setInterval(fetchAndUpdateResults, 5000);
+    // const intervalId = setInterval(fetchAndUpdateResults, 5000);
 
-    return () => clearInterval(intervalId);
+    // return () => clearInterval(intervalId);
   }, []);
 
   const today = new Date().toLocaleDateString("zh-CN", {
