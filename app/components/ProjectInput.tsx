@@ -1,4 +1,5 @@
-import type{ ProjectInput, ProjectInputs } from '../types';
+import type { ProjectInput } from '../types';
+import { useState } from 'react';
 
 interface ProjectInputProps {
   project: string;
@@ -7,42 +8,30 @@ interface ProjectInputProps {
 }
 
 export default function ProjectInput({ project, input, onChange }: ProjectInputProps) {
+  const [inputCount] = useState(5); // 设置默认2个输入框
+
+  const handleCountChange = (index: number, value: string) => {
+    const newCounts = [...(input.counts || [])];
+    newCounts[index] = value;
+    onChange(project, { counts: newCounts });
+  };
+
   return (
     <div className="flex flex-col gap-2 border p-4 rounded shadow-md bg-white w-full">
       <h3 className="font-semibold text-center text-lg">{project}</h3>
       <div className="flex flex-col gap-2">
-        <div className="flex items-center gap-2">
-          <label className="w-24 text-right text-sm">次数:</label>
-          <input
-            type="number"
-            className="border p-2 rounded flex-1 text-sm"
-            placeholder={`输入${project}次数`}
-            value={input.count}
-            onChange={(e) => onChange(project, { 
-              count: e.target.value ? Number(e.target.value) : "" 
-            })}
-          />
-        </div>
-        <div className="flex items-center gap-2">
-          <label className="w-24 text-right text-sm">描述1:</label>
-          <input
-            type="text"
-            className="border p-2 rounded flex-1 text-sm"
-            placeholder={`输入${project}描述1`}
-            value={input.description1}
-            onChange={(e) => onChange(project, { description1: e.target.value })}
-          />
-        </div>
-        <div className="flex items-center gap-2">
-          <label className="w-24 text-right text-sm">描述2:</label>
-          <input
-            type="text"
-            className="border p-2 rounded flex-1 text-sm"
-            placeholder={`输入${project}描述2`}
-            value={input.description2}
-            onChange={(e) => onChange(project, { description2: e.target.value })}
-          />
-        </div>
+        {Array(inputCount).fill(0).map((_, index) => (
+          <div key={index} className="flex items-center gap-2">
+            <label className="w-24 text-right text-sm">次数 {index + 1}:</label>
+            <input
+              type="number"
+              className="border p-2 rounded flex-1 text-sm"
+              placeholder={`输入${project}次数 ${index + 1}`}
+              value={input.counts?.[index] || ''}
+              onChange={(e) => handleCountChange(index, e.target.value)}
+            />
+          </div>
+        ))}
       </div>
     </div>
   );

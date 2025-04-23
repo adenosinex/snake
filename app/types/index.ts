@@ -4,12 +4,10 @@ export type DatabaseResult = {
   createdAt: string;
 };
 
-export type ProjectInput = {
-  count: number | "";
-  description1: string;
-  description2: string;
-};
+export interface ProjectInput {
+  counts: string[];
+}
 
-export type ProjectInputs = {
+export interface ProjectInputs {
   [key: string]: ProjectInput;
-};
+}

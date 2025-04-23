@@ -14,7 +14,7 @@ export default function Home() {
   const [projects, setProjects] = useState<string[]>(defaultProjects);
   const [projectInputs, setProjectInputs] = useState<ProjectInputs>(
     projects.reduce((acc, project) => {
-      acc[project] = { count: "", description1: "", description2: "" };
+      acc[project] = { counts: [] };
       return acc;
     }, {} as ProjectInputs)
   );
@@ -29,24 +29,18 @@ export default function Home() {
   };
 
   const saveToDatabase = async (data: string) => {
-    const tempId = Date.now();
-    const now = new Date().toISOString();
-
     try {
-      // 先保存到数据库
       const result = await saveData(data);
       console.log('保存结果:', result);
 
-      // 更新前端数据
       setDatabaseResults(prev => [
         {
           id: result.id,
           data: data,
-          createdAt: result.createdAt || now
+          createdAt: new Date().toISOString() // 直接使用 ISO 格式时间戳
         },
         ...prev
       ]);
-
     } catch (err) {
       console.error("保存数据时出错:", err);
     }
@@ -77,19 +71,14 @@ export default function Home() {
 
   const handleAddEntry = async () => {
     const newEntries = Object.entries(projectInputs)
-      .filter(([_, inputs]) => inputs.count !== "" || inputs.description1 || inputs.description2)
+      .filter(([_, inputs]) => inputs.counts.some(count => count !== ''))
       .map(([project, inputs]) => {
-        const parts = [
-          project,
-          inputs.count !== "" ? inputs.count : null,
-          inputs.description1 || null,
-          inputs.description2 || null,
-        ].filter(Boolean);
-        return parts.join(" ");
+        const counts = inputs.counts.filter(count => count !== '');
+        return `${project} ${counts.join(' ')}`;
       });
 
     if (newEntries.length > 0) {
-      const output = today +" "+ newEntries.join(" ");
+      const output = today + " " + newEntries.join(" ");
       console.log("生成的结果:", output);
       setCurrentOutput(output);
       await saveToDatabase(output);
@@ -115,11 +104,15 @@ export default function Home() {
     // return () => clearInterval(intervalId);
   }, []);
 
-  const today = new Date().toLocaleDateString("zh-CN", {
+  const today = new Date().toLocaleString("zh-CN", {
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
-  });
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+    timeZone: "Asia/Shanghai"
+  }).replace(/\//g, '-');
 
   const handleCopy = (text: string) => {
     navigator.clipboard.writeText(text).then(() => {
