@@ -8,7 +8,7 @@ interface ProjectInputProps {
 }
 
 export default function ProjectInput({ project, input, onChange }: ProjectInputProps) {
-  const [inputCount] = useState(5); // 设置默认2个输入框
+  const [inputCount] = useState(1); // 设置默认2个输入框
 
   const handleCountChange = (index: number, value: string) => {
     const newCounts = [...(input.counts || [])];
@@ -24,7 +24,7 @@ export default function ProjectInput({ project, input, onChange }: ProjectInputP
           <div key={index} className="flex items-center gap-2">
             <label className="w-24 text-right text-sm">次数 {index + 1}:</label>
             <input
-              type="number"
+              type="text"
               className="border p-2 rounded flex-1 text-sm"
               placeholder={`输入${project}次数 ${index + 1}`}
               value={input.counts?.[index] || ''}
